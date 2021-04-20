@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+#
+# This scripts builds a deployable container from one of the projects.
+# it can be run from any place in the git repo and the only argument it takes is
+# the name of the project.
+# The only requirements for running this script are git and docker
+#
+# The build is performed in two steps.
+# 1. Build the docker container that contains the build script and all of its attendant
+# utilities. This container is rebuilt every time, but given that it is really lightweight,
+# is not expected to change that often, and docker does proper caching, this operation will
+# almost always be a noop
+# 2. Build the deployable project container using the first container that is built in the
+# previous step
+
+set -euo pipefail
+
+GIT_DIR=`git rev-parse --show-toplevel`
+PROJECT=${1}
+
+echo "Building deploy builder container"
+docker build ${GIT_DIR}/ops/deploy_builder -t deploy_builder:latest
+echo "Building deployable container for project ${PROJECT}"
+docker run -v /var/run/docker.sock:/var/run/docker.sock -v ${GIT_DIR}:/tmp/build_point deploy_builder:latest ${PROJECT}
+
+
